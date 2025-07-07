@@ -1,7 +1,7 @@
 import requests
 import time
 import datetime
-from plyer import notification
+from notifypy import Notify
 
 def get_latest_comic_number():
     url = "https://xkcd.com/info.0.json"
@@ -18,14 +18,14 @@ def check_comic_exists(comic_number):
     response = requests.get(url)
     return response.status_code != 404
 
-def notify_user(message):
+def notify_user(message, comic_number):
     print(message)
     try:
-        notification.notify(
-            title="XKCD Update",
-            message=message,
-            timeout=10
-        )
+        notification = Notify()
+        notification.title = "XKCD Update"
+        notification.message = message
+        notification.open = f"https://xkcd.com/{comic_number}"
+        notification.send()
     except Exception as e:
         print(f"Notification error: {e}")
 
@@ -38,33 +38,23 @@ def wait_until_next_check(interval_seconds):
 
 def main():
     checked_comics = set()
+    latest_known_comic = get_latest_comic_number() or 0  # Initialize with the latest known comic
 
     while True:
-        if not is_expected_upload_day():
-            print("Not an XKCD update day. Sleeping for 6 hours.")
-            time.sleep(6 * 60 * 60)
-            continue
-
         latest = get_latest_comic_number()
         if latest is None:
-            wait_until_next_check(60)
-            continue
-
-        next_comic = latest + 1
-
-        if next_comic in checked_comics:
             wait_until_next_check(30)
             continue
 
-        print(f"Checking for XKCD comic #{next_comic}...")
-        if check_comic_exists(next_comic):
-            message = f"XKCD Comic {next_comic} uploaded!"
-            notify_user(message)
-            checked_comics.add(next_comic)
-            print("Comic found. Sleeping until next expected upload day.")
-            time.sleep(24 * 60 * 60)  # Sleep a full day
+        if latest > latest_known_comic:
+            # New comic found!
+            message = f"New XKCD Comic {latest} uploaded!"
+            notify_user(message, latest)
+            latest_known_comic = latest
         else:
-            wait_until_next_check(30)
+            print("No new comic found. Checking again soon...")
+
+        wait_until_next_check(30)
 
 if __name__ == "__main__":
     main()
