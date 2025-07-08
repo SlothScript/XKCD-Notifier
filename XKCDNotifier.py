@@ -2,6 +2,7 @@ import requests
 import time
 import datetime
 from notifypy import Notify
+import sys
 
 def get_latest_comic_number():
     url = "https://xkcd.com/info.0.json"
@@ -30,20 +31,53 @@ def notify_user(message, comic_number):
         print(f"Notification error: {e}")
 
 def is_expected_upload_day():
-    return datetime.datetime.today().weekday() in [0, 2, 4]  # Monday, Wednesday, Friday
+    return datetime.datetime.now().weekday() in {0, 2, 4}
 
-def wait_until_next_check(interval_seconds):
-    print(f"Waiting {interval_seconds} seconds...")
-    time.sleep(interval_seconds)
+def countdown_timer(seconds):
+    start_time = time.time()
+    while seconds > 0:
+        elapsed = time.time() - start_time
+        remaining = max(seconds - int(elapsed), 0)
+        
+        hours, remainder = divmod(remaining, 3600)
+        minutes, secs = divmod(remainder, 60)
+        time_str = f"{hours:02d}:{minutes:02d}:{secs:02d}"
+        sys.stdout.write(f"\rNext check in {time_str}")
+        sys.stdout.flush()
+        
+        if remaining == 0:
+            break
+        
+        time.sleep(1)
+    sys.stdout.write("\r" + " " * 40 + "\r")  # Clear the line
 
 def main():
-    checked_comics = set()
     latest_known_comic = get_latest_comic_number() or 0  # Initialize with the latest known comic
 
     while True:
+        # Only check for comics on expected upload days
+        if not is_expected_upload_day():
+            print("Not a release day. Calculating next upload time...")
+            
+            # Find next expected upload day
+            today = datetime.datetime.now()
+            days_ahead = (0 - today.weekday() + 7) % 7  # Next Monday
+            if today.weekday() > 0:
+                days_ahead = (2 - today.weekday() + 7) % 7  # Next Wednesday
+                if today.weekday() > 2:
+                    days_ahead = (4 - today.weekday() + 7) % 7  # Next Friday
+
+            next_upload_day = today + datetime.timedelta(days=days_ahead)
+            next_upload_day = next_upload_day.replace(hour=8, minute=0, second=0, microsecond=0)
+            
+            # Sleep until 8am on next upload day
+            sleep_seconds = int((next_upload_day - today).total_seconds())
+            countdown_timer(sleep_seconds)
+            continue
+
         latest = get_latest_comic_number()
         if latest is None:
-            wait_until_next_check(30)
+            countdown_timer(300)
             continue
 
         if latest > latest_known_comic:
@@ -54,7 +88,7 @@ def main():
         else:
             print("No new comic found. Checking again soon...")
 
-        wait_until_next_check(30)
+        countdown_timer(300)
 
 if __name__ == "__main__":
     main()
