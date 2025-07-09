@@ -85,6 +85,7 @@ def main():
             message = f"New XKCD Comic {latest} uploaded!"
             notify_user(message, latest)
             latest_known_comic = latest
+            countdown_timer(24*1.5*60*60)  # Wait a day and a half (Ranall usually posts in the noon, so waiting 1.5 days will get you close to the beginning of the next post date.)
         else:
             print("No new comic found. Checking again soon...")
 
