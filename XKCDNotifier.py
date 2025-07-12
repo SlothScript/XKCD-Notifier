@@ -39,9 +39,9 @@ def countdown_timer(seconds):
         elapsed = time.time() - start_time
         remaining = max(seconds - int(elapsed), 0)
         
-        hours, remainder = divmod(remaining, 3600)
-        minutes, secs = divmod(remainder, 60)
-        time_str = f"{hours:02d}:{minutes:02d}:{secs:02d}"
+        hours, remainder = divmod(int(remaining), 3600)
+        minutes, secs = divmod(int(remainder), 60)
+        time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(secs):02d}"
         sys.stdout.write(f"\rNext check in {time_str}")
         sys.stdout.flush()
         
@@ -62,7 +62,9 @@ def main():
             # Find next expected upload day
             today = datetime.datetime.now()
             days_ahead = (0 - today.weekday() + 7) % 7  # Next Monday
-            if today.weekday() > 0:
+            if today.weekday() >= 5:  # If it's Saturday or Sunday
+                days_ahead = (0 - today.weekday() + 7) % 7  # Next Monday
+            elif today.weekday() > 0:
                 days_ahead = (2 - today.weekday() + 7) % 7  # Next Wednesday
                 if today.weekday() > 2:
                     days_ahead = (4 - today.weekday() + 7) % 7  # Next Friday
